@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petualangan Harta Karun - Keamanan Jaringan</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#102719;color:#fff;overflow:hidden}
+#game{position:relative;width:100vw;height:100vh;background:#173d25;overflow:hidden}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.05) brightness(.78)}
+#shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,.05) 45%,rgba(0,0,0,.48))}
+.topbar{position:absolute;left:18px;right:18px;top:15px;z-index:5;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.panel{background:rgba(10,24,18,.82);border:1px solid rgba(255,255,255,.28);box-shadow:0 8px 25px rgba(0,0,0,.3);backdrop-filter:blur(7px);border-radius:16px;padding:10px 15px}
+.stats{display:flex;gap:18px;align-items:center;font-weight:700}
+.stat b{color:#ffd54a;font-size:21px}
+.title{font-size:clamp(15px,2vw,23px);font-weight:900}
+.progress{width:180px;height:10px;background:#23352c;border-radius:99px;overflow:hidden;margin-top:5px}
+.progress i{display:block;height:100%;width:0;background:#52d66d;transition:.3s}
+#player{position:absolute;z-index:4;width:78px;height:78px;border-radius:50%;border:3px solid #ffd54a;background:rgba(19,31,23,.82);display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 8px 20px #0008;transition:left .12s,top .12s}
+#player span{filter:drop-shadow(0 3px 2px #000)}
+.treasure{position:absolute;z-index:3;width:64px;height:64px;border-radius:16px;border:2px solid #ffe18a;background:rgba(80,47,10,.8);box-shadow:0 5px 16px #0008;display:flex;align-items:center;justify-content:center;font-size:37px;cursor:pointer;animation:pulse 1.5s infinite}
+.treasure:hover{transform:scale(1.12)}
+.treasure.done{filter:grayscale(1);opacity:.45;animation:none}
+@keyframes pulse{50%{box-shadow:0 0 0 10px #ffd54a12,0 5px 18px #0009}}
+#hint{position:absolute;z-index:5;bottom:20px;left:50%;transform:translateX(-50%);width:min(720px,92vw);text-align:center}
+.hintText{font-size:14px}
+.controls{display:flex;justify-content:center;gap:8px;margin-top:8px}
+.controls button{width:45px;height:38px;border:0;border-radius:10px;background:#ffffffd9;font-size:20px;cursor:pointer}
+#modal{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:18px}
+.card{width:min(700px,96vw);max-height:92vh;overflow:auto;background:linear-gradient(145deg,#193e29,#0e2519);border:2px solid #ffd54a;border-radius:24px;padding:24px;box-shadow:0 25px 80px #000}
+.badge{display:inline-block;background:#ffd54a;color:#2a2100;font-weight:900;padding:7px 12px;border-radius:99px}
+.q{font-size:clamp(19px,3vw,28px);font-weight:800;line-height:1.3;margin:18px 0}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.answers button{padding:14px;border:1px solid #ffffff38;border-radius:14px;background:#ffffff12;color:#fff;text-align:left;font-size:16px;cursor:pointer}
+.answers button:hover{background:#ffffff25}
+.answers button.correct{background:#247b3d!important;border-color:#66e88a}
+.answers button.wrong{background:#8a2e2e!important;border-color:#ff8888}
+#result{margin-top:16px;font-size:18px;font-weight:700;min-height:28px}
+.next{display:none;margin-top:16px;padding:13px 22px;border:0;border-radius:13px;background:#ffd54a;color:#2c2200;font-weight:900;font-size:16px;cursor:pointer}
+.start{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:linear-gradient(#05150bcc,#071d12dd);padding:20px}
+.startCard{width:min(720px,94vw);text-align:center;background:#12311fdd;border:2px solid #ffd54a;border-radius:26px;padding:30px;box-shadow:0 20px 70px #000}
+.startCard h1{font-size:clamp(28px,5vw,52px);margin:5px 0 10px}
+.startCard p{line-height:1.6;color:#e5f3e8}
+.startCard button{border:0;border-radius:14px;padding:15px 28px;background:#ffd54a;color:#2a2100;font-size:18px;font-weight:900;cursor:pointer}
+.final{font-size:22px;margin:18px 0}
+@media(max-width:600px){.answers{grid-template-columns:1fr}.stats{gap:8px;font-size:12px}.stat b{font-size:17px}.topbar{left:8px;right:8px;top:8px}.panel{padding:8px 10px}#player{width:62px;height:62px;font-size:34px}.treasure{width:54px;height:54px;font-size:30px}}
+</style>
+</head>
+<body>
+<div id="game">
+<img id="bg" alt="Hutan Amazon">
+<div id="shade"></div>
+<div class="topbar">
+  <div class="panel">
+    <div class="title">🌿 Petualangan Harta Karun</div>
+    <div class="stats">
+      <div class="stat">💰 Nilai: <b id="score">0</b></div>
+      <div class="stat">🗺️ Harta: <b id="count">0/30</b></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div>🛡️ Keamanan Jaringan</div>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+</div>
+<div id="player"><span>🧭</span></div>
+<div id="treasures"></div>
+<div id="hint" class="panel">
+  <div class="hintText">Gerakkan penjelajah dengan <b>WASD / tombol panah</b>. Dekati atau klik peti harta karun untuk menjawab soal.</div>
+  <div class="controls">
+    <button data-key="ArrowLeft">◀</button><button data-key="ArrowUp">▲</button><button data-key="ArrowDown">▼</button><button data-key="ArrowRight">▶</button>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="card">
+    <span class="badge" id="qnum">HARTA KARUN #1</span>
+    <div class="q" id="question"></div>
+    <div class="answers" id="answers"></div>
+    <div id="result"></div>
+    <button class="next" id="next">Lanjutkan Petualangan ➜</button>
+  </div>
+</div>
+
+<div id="start" class="start">
+ <div class="startCard">
+   <div style="font-size:65px">🗺️💎🌴</div>
+   <h1>Petualangan Harta Karun</h1>
+   <h2>Keamanan Jaringan Komputer</h2>
+   <p>
+     Jelajahi hutan, temukan <b>30 peti harta karun</b>, dan jawab pertanyaan keamanan jaringan.
+     <br><b>Jawaban benar = +5 poin</b> • <b>Jawaban salah = 0 poin</b>
+     <br>Walaupun salah, kamu <b>tetap dapat melanjutkan petualangan</b>.
+   </p>
+   <button id="startBtn">🚀 Mulai Petualangan</button>
+ </div>
+</div>
+</div>
+
+<script>
+const QUESTIONS = [["Apa tujuan utama firewall pada jaringan komputer?", ["Mempercepat internet", "Mengontrol lalu lintas jaringan berdasarkan aturan keamanan", "Menambah kapasitas RAM", "Mengganti alamat IP"], 1], ["Apa yang dimaksud dengan malware?", ["Perangkat jaringan", "Perangkat lunak berbahaya", "Kabel jaringan", "Sistem operasi"], 1], ["Contoh malware yang dapat mengenkripsi file korban lalu meminta tebusan adalah...", ["Ransomware", "Firewall", "Router", "Proxy"], 0], ["Apa fungsi antivirus?", ["Mendeteksi dan membantu menghapus perangkat lunak berbahaya", "Membuat kabel jaringan", "Mengganti monitor", "Menambah bandwidth secara otomatis"], 0], ["Password yang paling aman sebaiknya...", ["123456", "Nama sendiri", "Panjang, unik, dan sulit ditebak", "Tanggal lahir"], 2], ["Apa fungsi autentikasi dua faktor (2FA)?", ["Menghapus akun", "Menambahkan lapisan verifikasi selain password", "Mematikan firewall", "Mempercepat CPU"], 1], ["Phishing adalah...", ["Upaya menipu korban agar memberikan informasi sensitif", "Proses memperbaiki kabel", "Teknik memperkuat sinyal Wi-Fi", "Cara mencadangkan data"], 0], ["Apa yang sebaiknya dilakukan saat menerima tautan mencurigakan dari orang tidak dikenal?", ["Langsung klik", "Bagikan ke teman", "Periksa sumber dan hindari membuka jika mencurigakan", "Masukkan password"], 2], ["HTTPS pada alamat situs menunjukkan bahwa...", ["Koneksi web menggunakan enkripsi TLS/SSL", "Situs pasti bebas penipuan", "Internet menjadi gratis", "Komputer bebas virus"], 0], ["Apa fungsi enkripsi?", ["Mengubah data menjadi bentuk yang sulit dibaca tanpa kunci", "Menghapus semua data", "Memperbesar file", "Mematikan jaringan"], 0], ["VPN dapat membantu keamanan dengan cara...", ["Membuat terowongan koneksi terenkripsi antara perangkat dan server VPN", "Menambah ukuran hard disk", "Mengganti keyboard", "Menghapus sistem operasi"], 0], ["Apa yang dimaksud dengan IP address?", ["Alamat logis yang digunakan untuk mengidentifikasi perangkat pada jaringan", "Nama antivirus", "Jenis kabel", "Kata sandi Wi-Fi"], 0], ["Apa kepanjangan dari DoS?", ["Data of Security", "Denial of Service", "Domain of Server", "Device on System"], 1], ["Serangan DDoS biasanya bertujuan untuk...", ["Membuat layanan sulit diakses dengan membanjiri target trafik", "Memperbaiki server", "Menghemat bandwidth", "Mencetak dokumen"], 0], ["Mengapa sistem operasi perlu diperbarui secara berkala?", ["Untuk mendapatkan perbaikan keamanan dan bug", "Agar monitor lebih besar", "Untuk menghapus keyboard", "Supaya password menjadi pendek"], 0], ["Apa fungsi backup data?", ["Menyediakan salinan data untuk pemulihan jika data utama hilang/rusak", "Menghapus data asli", "Membuka semua password", "Mematikan antivirus"], 0], ["Manakah contoh social engineering?", ["Membujuk pegawai agar memberikan kode OTP", "Mengganti kabel LAN", "Memasang RAM", "Mengatur resolusi layar"], 0], ["OTP sebaiknya...", ["Dibagikan kepada siapa saja", "Disimpan dan tidak diberikan kepada orang lain", "Diposting di media sosial", "Dikirim ke nomor acak"], 1], ["SSID adalah...", ["Nama jaringan Wi-Fi", "Jenis virus", "Alamat email", "Nama prosesor"], 0], ["WPA2 dan WPA3 digunakan terutama untuk...", ["Keamanan jaringan Wi-Fi", "Memperbaiki monitor", "Mengatur printer", "Meningkatkan kapasitas hard disk"], 0], ["Apa risiko menggunakan Wi-Fi publik tanpa perlindungan yang memadai?", ["Data dapat lebih mudah disadap atau diarahkan ke jaringan berbahaya", "Baterai selalu penuh", "Komputer otomatis lebih cepat", "Tidak ada risiko sama sekali"], 0], ["Prinsip least privilege berarti...", ["Memberikan hak akses minimum yang diperlukan untuk tugas", "Memberikan akses admin kepada semua pengguna", "Menghapus semua akun", "Membuka semua port"], 0], ["Apa fungsi IDS dalam keamanan jaringan?", ["Mendeteksi aktivitas atau pola yang mencurigakan", "Mengganti kabel jaringan", "Menyimpan foto", "Meningkatkan ukuran layar"], 0], ["Apa fungsi IPS?", ["Mendeteksi dan dapat mencegah atau memblokir aktivitas berbahaya", "Mengganti alamat rumah", "Menghapus backup", "Membuat akun media sosial"], 0], ["Port pada komputer jaringan dapat dianalogikan sebagai...", ["Pintu layanan komunikasi tertentu pada perangkat", "Jenis kabel listrik", "Kapasitas RAM", "Nama pengguna"], 0], ["Mengapa port yang tidak diperlukan sebaiknya ditutup?", ["Untuk mengurangi permukaan serangan", "Agar internet gratis", "Untuk memperbesar monitor", "Agar semua layanan terbuka"], 0], ["Apa yang dimaksud brute force attack?", ["Mencoba banyak kombinasi password sampai menemukan yang benar", "Mencadangkan data", "Memperbarui antivirus", "Mengganti kabel"], 0], ["Cara mengurangi risiko brute force adalah...", ["Menggunakan password kuat dan membatasi percobaan login", "Menggunakan password 1234", "Menonaktifkan semua update", "Membagikan password"], 0], ["Apa tujuan segmentasi jaringan?", ["Memisahkan jaringan menjadi bagian-bagian untuk membantu membatasi akses dan dampak serangan", "Menghapus router", "Mematikan internet", "Mengurangi jumlah komputer menjadi satu"], 0], ["Jika akun terkena indikasi peretasan, tindakan awal yang tepat adalah...", ["Amankan akun, ganti password dari perangkat tepercaya, dan laporkan/cek aktivitas", "Membagikan password kepada teman", "Menghapus semua backup", "Mengabaikannya"], 0]];
+document.getElementById("bg").src = "hutan-amazon.png";
+
+let score=0, opened=0, current=0, answered=false;
+let player={x:50,y:70};
+const treasures=[];
+const positions=[
+[18,28],[30,23],[43,28],[58,20],[72,28],[84,21],
+[25,42],[39,39],[53,43],[68,39],[81,45],
+[14,56],[28,53],[43,58],[58,54],[73,58],[87,55],
+[20,72],[34,68],[49,73],[64,69],[79,74],
+[12,86],[27,82],[42,88],[57,82],[70,88],[84,82],
+[50,48],[62,30]
+];
+
+function setup(){
+ const wrap=document.getElementById('treasures');
+ positions.forEach((p,i)=>{
+   const el=document.createElement('div');
+   el.className='treasure';
+   el.textContent='💎';
+   el.style.left=`${p[0]}%`; el.style.top=`${p[1]}%`;
+   el.title=`Harta karun ${i+1}`;
+   el.onclick=()=>openQuestion(i);
+   wrap.appendChild(el);
+   treasures.push(el);
+ });
+ updatePlayer();
+}
+function updatePlayer(){
+ document.getElementById('player').style.left=`calc(${player.x}% - 39px)`;
+ document.getElementById('player').style.top=`calc(${player.y}% - 39px)`;
+}
+function move(key){
+ if(document.getElementById('modal').style.display==='flex') return;
+ const step=3;
+ if(key==='ArrowLeft'||key==='a') player.x-=step;
+ if(key==='ArrowRight'||key==='d') player.x+=step;
+ if(key==='ArrowUp'||key==='w') player.y-=step;
+ if(key==='ArrowDown'||key==='s') player.y+=step;
+ player.x=Math.max(5,Math.min(95,player.x));
+ player.y=Math.max(12,Math.min(90,player.y));
+ updatePlayer();
+ checkNear();
+}
+function checkNear(){
+ positions.forEach((p,i)=>{
+   if(treasures[i].classList.contains('done')) return;
+   const dx=player.x-p[0], dy=player.y-p[1];
+   if(Math.sqrt(dx*dx+dy*dy)<6) openQuestion(i);
+ });
+}
+function openQuestion(i){
+ if(treasures[i].classList.contains('done')) return;
+ current=i; answered=false;
+ document.getElementById('qnum').textContent=`HARTA KARUN #${i+1} / 30`;
+ document.getElementById('question').textContent=QUESTIONS[i][0];
+ const ans=document.getElementById('answers'); ans.innerHTML='';
+ QUESTIONS[i][1].forEach((a,j)=>{
+   const b=document.createElement('button');
+   b.textContent=String.fromCharCode(65+j)+'. '+a;
+   b.onclick=()=>answer(j);
+   ans.appendChild(b);
+ });
+ document.getElementById('result').textContent='';
+ document.getElementById('next').style.display='none';
+ document.getElementById('modal').style.display='flex';
+}
+function answer(j){
+ if(answered) return;
+ answered=true;
+ const q=QUESTIONS[current];
+ const btns=[...document.querySelectorAll('#answers button')];
+ btns[q[2]].classList.add('correct');
+ if(j===q[2]){
+   score+=5;
+   document.getElementById('result').textContent='✅ Benar! Kamu mendapatkan +5 poin.';
+ }else{
+   btns[j].classList.add('wrong');
+   document.getElementById('result').textContent='❌ Belum tepat. Nilai 0, tetapi kamu tetap melanjutkan petualangan.';
+ }
+ opened++;
+ treasures[current].classList.add('done');
+ document.getElementById('score').textContent=score;
+ document.getElementById('count').textContent=`${opened}/30`;
+ document.getElementById('bar').style.width=`${opened/30*100}%`;
+ document.getElementById('next').style.display='inline-block';
+}
+document.getElementById('next').onclick=()=>{
+ document.getElementById('modal').style.display='none';
+ if(opened>=30) finish();
+};
+function finish(){
+ document.getElementById('modal').style.display='flex';
+ document.getElementById('qnum').textContent='🏆 PETUALANGAN SELESAI';
+ document.getElementById('question').innerHTML=`Kamu telah menemukan semua 30 harta karun!<div class="final">Skor akhir: <b>${score} / 150</b></div>`;
+ document.getElementById('answers').innerHTML='<div style="grid-column:1/-1;text-align:center;font-size:18px">🎉 Hebat! Setiap jawaban benar bernilai 5 poin. Jawaban yang salah bernilai 0, tetapi tidak menghentikan petualangan.</div>';
+ document.getElementById('result').textContent='Terima kasih sudah belajar keamanan jaringan komputer.';
+ document.getElementById('next').style.display='none';
+}
+document.addEventListener('keydown',e=>move(e.key));
+document.querySelectorAll('.controls button').forEach(b=>{
+ b.addEventListener('click',()=>move(b.dataset.key));
+});
+document.getElementById('startBtn').onclick=()=>{
+ document.getElementById('start').style.display='none';
+};
+setup();
+</script>
+</body>
+</html>
